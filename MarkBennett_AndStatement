@@ -1,0 +1,151 @@
+import lejos.nxt.Button;
+import lejos.nxt.ColorSensor;
+import lejos.nxt.LCD;
+import lejos.nxt.Motor;
+import lejos.nxt.NXT;
+import lejos.nxt.SensorPort;
+import lejos.nxt.Sound;
+import lejos.robotics.Color;
+
+/**
+ * Description This simple program is a turing machine that computes boolean AND
+ * statements.
+ * 
+ * @author Mark Bennett
+ * 
+ */
+public class AndStatement {
+	//Instance Fields
+	static ColorSensor sensor;
+	static int state = -1;
+	private static int start = 0;
+	
+	//constants for easy reading
+	//finals states
+	static final int FINAL_STATE_FOUR=25;
+	static final int FINAL_STATE_THREE=25;
+	//for motors which can be tuned for better precision
+	static final int INTERVAL_BETWEEN_INPUTS=-1820;
+	static final int ROTATE_BY_PIE=180;
+	//to see what final output should be
+	static final String T = "True";
+	static final String F = "False";
+	//flag to end loop when computation is complete
+	static boolean isDone = false;
+	
+	
+	
+	public static void main(String[]args){
+		sensorSetup();
+		tapePrep();
+		
+		//where the program happens
+		while(!isDone){
+			moveTapeForeward();
+			LCD.clear();
+			state();
+			//display current state information
+			LCD.drawString("State: ",0,0);
+			LCD.drawInt(state,6,0);}
+		if(state==FINAL_STATEFOUR){
+			Sound.beepSequence();
+			LCD.drawString(F,5,3);}
+		if(state == FINAL_STATE_THREE){
+			sound.beepSequenceUP();
+			LCD.drawString(T,5,3);
+		}
+		Button.waitForAnyPress();
+	}
+	
+	//sets up the color sensor and then locks it in place.
+	public static void sensorSetup(){
+		sensor = new ColorSensor(SensorPort.S1);
+		sensor.setFloodlight(Color.WHITE);
+		LCD.drawString("Testing Readings" + "\n"+ "Hold ENTER when" + "\n" +"done.",0,0);
+		while(!Button.ENTER.isPressed()){
+			moveTapeForeward();
+			if(sensor.getColorID()==7){
+				LCD.drawString("T",5,3);
+			}else if(sensor.getColorID()==3 || sensor.ColorID()==1){
+				LCD.drawString("F",5,3);
+			}
+		}
+		LCD.clear();
+	}
+	
+	//this provides an opportunity to adjust tape so that readings are correct
+	public static void tapePrep(){
+		LCD.drawString("Prepare the"+"tape"+"\n"+"now. Hold LEFT"+"\n"+" when done.",0,0);
+		while(!Button.LEFT.isPressed()){}
+		LCD.clear();
+	}
+	public static void moveTapeForward(){
+		Motor.A.roate(INTERVAL_BETWEEN_INPUTS);
+	}
+	
+	//this is what the machine does in each state
+	public static void(state){
+		//read as sensor value 7=true
+		boolean b = inputFromTape();
+		
+		switch(state){
+		case-1:
+			//the start symbol is two readings of true consecutively
+			if(state==1){
+				if(b){
+					state++;
+					break;
+				}else{
+					start--;
+					break;}
+				}
+			if(b){
+				start++;
+			}
+			break;
+		case 0:
+			//the start state 
+			if(b){
+				state = 1;
+			}else if(!b){state=2;}
+			break;
+		case 1:
+			if(b){
+				//takes you to final state 3
+				state =20;}
+			else if(!b){
+				//takes you to final state 4
+				state = 25;}
+			break;
+		case2:
+			if(b||!b){
+				//takes you to final state 4 invariantly
+				state=25;}
+			break;
+		default:
+			if(state==FINAL_STATE_THREE){
+				if(!b){
+					Motor.B.rotate(ROTATE_BY_PIE);
+				}
+			}elseif(state==FINAL_STATE_FOUR){
+				if(b){
+					Motor.B.rotate(-ROTATE_BY_PIE);
+				}
+			}isDone=true;
+			break;
+			}
+		
+	}
+	
+	//this interprets the meaning of what is read on the tape
+	private static boolean inputFromTape(){
+		int sensorValue =sensor.getColorID();
+		if(sensorValue ==1||sensorValue==3){
+			return false;
+		}else if(sensorValue==7){
+			return true;
+		}
+		return inputFromTape();
+	}
+
+}
